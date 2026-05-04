@@ -325,9 +325,11 @@ theorem Convex.openSegment_intrinsicInterior_intrinsicClosure_subset_intrinsicIn
   rcases (mem_intrinsicInterior).1 hx with ⟨xA, hxA, rfl⟩
   rcases (mem_intrinsicClosure).1 hy with ⟨yA, hyA, rfl⟩
   letI : Nonempty ↥(affineSpan 𝕜 C) := ⟨xA⟩
-  let e : (affineSpan 𝕜 C).direction ≃ᵃ[𝕜] affineSpan 𝕜 C := AffineEquiv.vaddConst 𝕜 xA
+  let e : (affineSpan 𝕜 C).direction ≃ᵃ[𝕜] affineSpan 𝕜 C :=
+    AffineEquiv.vaddConst 𝕜 xA
   let h : (affineSpan 𝕜 C).direction ≃ₜ affineSpan 𝕜 C := Homeomorph.vaddConst xA
-  let A : (affineSpan 𝕜 C).direction →ᵃ[𝕜] E := (affineSpan 𝕜 C).subtype.comp e.toAffineMap
+  let A : (affineSpan 𝕜 C).direction →ᵃ[𝕜] E :=
+    (affineSpan 𝕜 C).subtype.comp e.toAffineMap
   let s : Set (affineSpan 𝕜 C) := ((↑) : affineSpan 𝕜 C → E) ⁻¹' C
   let t : Set (affineSpan 𝕜 C).direction := e ⁻¹' s
   let y0 : (affineSpan 𝕜 C).direction := e.symm yA
@@ -339,10 +341,8 @@ theorem Convex.openSegment_intrinsicInterior_intrinsicClosure_subset_intrinsicIn
     simpa [A, s, t, e] using hC.affine_preimage A
   have hts : e '' t = s := AffineEquiv.surjective e |>.image_preimage s
   have hinter : e '' interior t = interior s := by
-    calc
-      e '' interior t = h '' interior t := by rfl
-      _ = interior (h '' t) := by simpa using h.image_interior t
-      _ = interior s := by simpa [e, h] using congrArg interior hts
+    rw [show (⇑e : _ → _) = h from rfl, h.image_interior]
+    simpa [e, h] using congrArg interior hts
   have hx0 : (0 : (affineSpan 𝕜 C).direction) ∈ interior t := by
     have hx0' : (0 : (affineSpan 𝕜 C).direction) ∈ h ⁻¹' interior s := by
       simpa [h, s] using hxA
