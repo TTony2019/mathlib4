@@ -44,7 +44,6 @@ The main results are:
 ## TODO
 
 * `IsClosed s → IsExtreme 𝕜 s (intrinsicFrontier 𝕜 s)`
-* `x ∈ s → y ∈ intrinsicInterior 𝕜 s → openSegment 𝕜 x y ⊆ intrinsicInterior 𝕜 s`
 -/
 
 @[expose] public section
@@ -338,9 +337,7 @@ theorem Convex.openSegment_intrinsicInterior_intrinsicClosure_subset_intrinsicIn
         simpa using (continuous_subtype_val.const_smul c) }
   have ht : Convex 𝕜 t := by
     simpa [A, s, t, e] using hC.affine_preimage A
-  have hts : e '' t = s := by
-    change e '' (e ⁻¹' s) = s
-    exact Set.image_preimage_eq_of_subset fun u hu ↦ ⟨e.symm u, by simp⟩
+  have hts : e '' t = s := AffineEquiv.surjective e |>.image_preimage s
   have hinter : e '' interior t = interior s := by
     calc
       e '' interior t = h '' interior t := by rfl
@@ -392,10 +389,10 @@ variable [NontriviallyNormedField 𝕜] [PartialOrder 𝕜]
 variable [NormedAddCommGroup E] [NormedSpace 𝕜 E]
 variable [CompleteSpace 𝕜] [FiniteDimensional 𝕜 E]
 
-/-- **Theorem 6.1** (Rockafellar): if `x` lies in the relative interior `intrinsicInterior 𝕜 C`
-of a convex set `C`, and `y` lies in `closure C`, then the open segment from `x` to `y` is
-contained in `intrinsicInterior 𝕜 C`. This is the finite-dimensional corollary obtained from
-the intrinsic-closure version via `intrinsicClosure_eq_closure`. -/
+/-- If `x` lies in the relative interior of a convex set `C` and `y` lies in `closure C`, then
+the open segment from `x` to `y` is contained in the relative interior of `C`.
+This is the finite-dimensional version of
+`Convex.openSegment_intrinsicInterior_intrinsicClosure_subset_intrinsicInterior`. -/
 theorem Convex.openSegment_intrinsicInterior_closure_subset_intrinsicInterior {C : Set E}
     (hC : Convex 𝕜 C) {x y : E} (hx : x ∈ intrinsicInterior 𝕜 C) (hy : y ∈ closure C) :
     openSegment 𝕜 x y ⊆ intrinsicInterior 𝕜 C := by
