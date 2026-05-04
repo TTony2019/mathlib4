@@ -5,6 +5,8 @@ Authors: Paul Reichert, Yaël Dillies
 -/
 module
 
+import Mathlib.Analysis.Convex.Topology
+
 public import Mathlib.Analysis.Normed.Affine.AddTorsorBases
 
 /-!
@@ -304,6 +306,104 @@ protected theorem Convex.intrinsicClosure (hs : Convex 𝕜 s) : Convex 𝕜 (in
   exact hs.closure.inter (affineSpan 𝕜 s).convex
 
 end Convex
+
+section IntrinsicClosure
+
+open AffineMap
+
+variable [Field 𝕜] [PartialOrder 𝕜]
+variable [AddCommGroup E] [Module 𝕜 E] [TopologicalSpace E]
+variable [IsTopologicalAddGroup E] [ContinuousConstSMul 𝕜 E]
+
+/-- If `x ∈ intrinsicInterior 𝕜 C` and `y ∈ intrinsicClosure 𝕜 C`, then the open segment
+from `x` to `y` stays in `intrinsicInterior 𝕜 C`. This is the intrinsic-closure form;
+the ambient-closure statement is the finite-dimensional corollary below. -/
+theorem Convex.openSegment_intrinsicInterior_intrinsicClosure_subset_intrinsicInterior {C : Set E}
+    (hC : Convex 𝕜 C)
+    {x y : E} (hx : x ∈ intrinsicInterior 𝕜 C)
+    (hy : y ∈ intrinsicClosure 𝕜 C) :
+    openSegment 𝕜 x y ⊆ intrinsicInterior 𝕜 C := by
+  rcases (mem_intrinsicInterior).1 hx with ⟨xA, hxA, rfl⟩
+  rcases (mem_intrinsicClosure).1 hy with ⟨yA, hyA, rfl⟩
+  letI : Nonempty ↥(affineSpan 𝕜 C) := ⟨xA⟩
+  let e : (affineSpan 𝕜 C).direction ≃ᵃ[𝕜] affineSpan 𝕜 C := AffineEquiv.vaddConst 𝕜 xA
+  let h : (affineSpan 𝕜 C).direction ≃ₜ affineSpan 𝕜 C := Homeomorph.vaddConst xA
+  let A : (affineSpan 𝕜 C).direction →ᵃ[𝕜] E := (affineSpan 𝕜 C).subtype.comp e.toAffineMap
+  let s : Set (affineSpan 𝕜 C) := ((↑) : affineSpan 𝕜 C → E) ⁻¹' C
+  let t : Set (affineSpan 𝕜 C).direction := e ⁻¹' s
+  let y0 : (affineSpan 𝕜 C).direction := e.symm yA
+  letI : ContinuousConstSMul 𝕜 (affineSpan 𝕜 C).direction :=
+    { continuous_const_smul := fun c ↦ by
+        rw [Topology.IsEmbedding.subtypeVal.continuous_iff]
+        simpa using (continuous_subtype_val.const_smul c) }
+  have ht : Convex 𝕜 t := by
+    simpa [A, s, t, e] using hC.affine_preimage A
+  have hts : e '' t = s := by
+    change e '' (e ⁻¹' s) = s
+    exact Set.image_preimage_eq_of_subset fun u hu ↦ ⟨e.symm u, by simp⟩
+  have hinter : e '' interior t = interior s := by
+    calc
+      e '' interior t = h '' interior t := by rfl
+      _ = interior (h '' t) := by simpa using h.image_interior t
+      _ = interior s := by simpa [e, h] using congrArg interior hts
+  have hx0 : (0 : (affineSpan 𝕜 C).direction) ∈ interior t := by
+    have hx0' : (0 : (affineSpan 𝕜 C).direction) ∈ h ⁻¹' interior s := by
+      simpa [h, s] using hxA
+    rw [h.preimage_interior] at hx0'
+    simpa [t, e, h] using hx0'
+  have hy0 : y0 ∈ closure t := by
+    have hy0' : y0 ∈ h ⁻¹' closure s := by
+      simpa [y0, h, e, s] using hyA
+    rw [h.preimage_closure] at hy0'
+    simpa [t, e, h] using hy0'
+  have hseg : openSegment 𝕜 (0 : (affineSpan 𝕜 C).direction) y0 ⊆ interior t :=
+    ht.openSegment_interior_closure_subset_interior hx0 hy0
+  have hA : A '' interior t = intrinsicInterior 𝕜 C := by
+    calc
+      A '' interior t = ((↑) '' (e '' interior t)) := by
+        ext z
+        constructor
+        · rintro ⟨u, hu, rfl⟩
+          exact ⟨e u, ⟨u, hu, rfl⟩, rfl⟩
+        · rintro ⟨w, ⟨u, hu, rfl⟩, rfl⟩
+          exact ⟨u, hu, rfl⟩
+      _ = intrinsicInterior 𝕜 C := by
+        rw [hinter, _root_.intrinsicInterior]
+  rintro z ⟨a, b, ha, hb, hab, rfl⟩
+  have hz0 : lineMap (0 : (affineSpan 𝕜 C).direction) y0 b ∈ interior t := by
+    apply hseg
+    exact ⟨a, b, ha, hb, hab, by simp [lineMap_apply_module]⟩
+  rw [← hA]
+  refine ⟨lineMap (0 : (affineSpan 𝕜 C).direction) y0 b, hz0, ?_⟩
+  have hab' : 1 - b = a := by
+    rw [sub_eq_iff_eq_add]
+    simpa [add_comm] using hab.symm
+  calc
+    A (lineMap (0 : (affineSpan 𝕜 C).direction) y0 b) = lineMap (xA : E) (yA : E) b := by
+      simp [A, y0, e]
+    _ = a • (xA : E) + b • (yA : E) := by
+      simp [lineMap_apply_module, hab']
+
+end IntrinsicClosure
+
+section Closure
+
+variable [NontriviallyNormedField 𝕜] [PartialOrder 𝕜]
+variable [NormedAddCommGroup E] [NormedSpace 𝕜 E]
+variable [CompleteSpace 𝕜] [FiniteDimensional 𝕜 E]
+
+/-- **Theorem 6.1** (Rockafellar): if `x` lies in the relative interior `intrinsicInterior 𝕜 C`
+of a convex set `C`, and `y` lies in `closure C`, then the open segment from `x` to `y` is
+contained in `intrinsicInterior 𝕜 C`. This is the finite-dimensional corollary obtained from
+the intrinsic-closure version via `intrinsicClosure_eq_closure`. -/
+theorem Convex.openSegment_intrinsicInterior_closure_subset_intrinsicInterior {C : Set E}
+    (hC : Convex 𝕜 C) {x y : E} (hx : x ∈ intrinsicInterior 𝕜 C) (hy : y ∈ closure C) :
+    openSegment 𝕜 x y ⊆ intrinsicInterior 𝕜 C := by
+  have hy' : y ∈ intrinsicClosure 𝕜 C := by
+    simpa [intrinsicClosure_eq_closure 𝕜 C] using hy
+  exact Convex.openSegment_intrinsicInterior_intrinsicClosure_subset_intrinsicInterior hC hx hy'
+
+end Closure
 
 private theorem aux {α β : Type*} [TopologicalSpace α] [TopologicalSpace β] (φ : α ≃ₜ β)
     (s : Set β) : (interior s).Nonempty ↔ (interior (φ ⁻¹' s)).Nonempty := by
