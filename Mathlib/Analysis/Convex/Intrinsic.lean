@@ -308,11 +308,10 @@ end Convex
 
 section IntrinsicClosure
 
-open AffineMap
-
 variable {E : Type*} [Field 𝕜] [PartialOrder 𝕜] [AddCommGroup E] [Module 𝕜 E] [TopologicalSpace E]
   [IsTopologicalAddGroup E] [ContinuousConstSMul 𝕜 E]
 
+open Homeomorph in
 /-- If `x ∈ intrinsicInterior 𝕜 C` and `y ∈ intrinsicClosure 𝕜 C`, then the open segment
 from `x` to `y` stays in `intrinsicInterior 𝕜 C`. This is the intrinsic-closure form;
 the ambient-closure statement is the finite-dimensional corollary below. -/
@@ -321,55 +320,16 @@ theorem Convex.openSegment_intrinsicInterior_intrinsicClosure_subset_intrinsicIn
     openSegment 𝕜 x y ⊆ intrinsicInterior 𝕜 C := by
   rcases mem_intrinsicInterior.1 hx with ⟨xA, hxA, rfl⟩
   rcases mem_intrinsicClosure.1 hy with ⟨yA, hyA, rfl⟩
-  letI : Nonempty ↥(affineSpan 𝕜 C) := ⟨xA⟩
-  let e : (affineSpan 𝕜 C).direction ≃ᵃ[𝕜] ↥(affineSpan 𝕜 C) := AffineEquiv.vaddConst 𝕜 xA
-  let h : (affineSpan 𝕜 C).direction ≃ₜ ↥(affineSpan 𝕜 C) := Homeomorph.vaddConst xA
-  let A : (affineSpan 𝕜 C).direction →ᵃ[𝕜] E := (affineSpan 𝕜 C).subtype.comp e.toAffineMap
-  let s : Set ↥(affineSpan 𝕜 C) := Subtype.val ⁻¹' C
-  let t := e ⁻¹' s
-  letI : ContinuousConstSMul 𝕜 (affineSpan 𝕜 C).direction :=
-    ⟨fun c ↦ Topology.IsEmbedding.subtypeVal.continuous_iff.mpr
-      (continuous_subtype_val.const_smul c)⟩
-  have ht : Convex 𝕜 t := hC.affine_preimage A
-  have hx0 : (0 : _) ∈ interior t := by
-    rw [show t = h ⁻¹' s from rfl, ← h.preimage_interior]; simpa [h] using hxA
-  have hy0 : e.symm yA ∈ closure t := by
-    rw [show t = h ⁻¹' s from rfl, ← h.preimage_closure]; simpa [h, e] using hyA
-  have hseg := ht.openSegment_interior_closure_subset_interior hx0 hy0
-  have hts : e '' t = s := e.surjective.image_preimage s
-  have hinter : e '' interior t = interior s := by
-    rw [show (⇑e : _ → _) = h from rfl, h.image_interior]
-    exact congrArg interior (show h '' t = s from (show (⇑h : _ → _) = ⇑e from rfl) ▸ hts)
-  have hA : A '' interior t = intrinsicInterior 𝕜 C := by
-    simp only [A, AffineMap.coe_comp, AffineSubspace.coe_subtype, AffineEquiv.coe_toAffineMap,
-      Set.image_comp, hinter, intrinsicInterior, s]
-  rintro _ ⟨a, b, ha, hb, hab, rfl⟩
-  rw [← hA]
-  refine ⟨lineMap 0 (e.symm yA) b,
-    hseg ⟨a, b, ha, hb, hab, by simp [lineMap_apply_module]⟩, ?_⟩
-  have hab' : (1 : 𝕜) - b = a := by rw [sub_eq_iff_eq_add, eq_comm, hab]
-  calc A (lineMap 0 (e.symm yA) b) = lineMap (xA : E) (yA : E) b := by simp [A, e]
-    _ = a • (xA : E) + b • (yA : E) := by simp [lineMap_apply_module, hab']
+  letI : Nonempty (affineSpan 𝕜 C) := ⟨xA⟩
+  let A := (affineSpan 𝕜 C).subtype.comp (AffineEquiv.vaddConst 𝕜 xA).toAffineMap
+  rw [intrinsicInterior, ← (vaddConst xA).image_interior_preimage_comp]
+  intro _ hz
+  simpa [A] using Convex.openSegment_image_interior_closure_preimage_subset (A := A) hC
+    (by simpa [A] using ((vaddConst xA).mem_interior_preimage_comp _ 0).2 (by simpa))
+    (by simpa [A] using ((vaddConst xA).mem_closure_preimage_comp _ (yA -ᵥ xA)).2 (by simpa))
+    (by simpa [A] using hz)
 
 end IntrinsicClosure
-
-section Closure
-
-variable {E : Type*} [NontriviallyNormedField 𝕜] [PartialOrder 𝕜] [NormedAddCommGroup E]
-  [NormedSpace 𝕜 E] [CompleteSpace 𝕜] [FiniteDimensional 𝕜 E]
-
-/-- If `x` lies in the relative interior of a convex set `C` and `y` lies in `closure C`, then
-the open segment from `x` to `y` is contained in the relative interior of `C`.
-This is the finite-dimensional version of
-`Convex.openSegment_intrinsicInterior_intrinsicClosure_subset_intrinsicInterior`. -/
-theorem Convex.openSegment_intrinsicInterior_closure_subset_intrinsicInterior {C : Set E}
-    (hC : Convex 𝕜 C) {x y : E} (hx : x ∈ intrinsicInterior 𝕜 C) (hy : y ∈ closure C) :
-    openSegment 𝕜 x y ⊆ intrinsicInterior 𝕜 C := by
-  have hy' : y ∈ intrinsicClosure 𝕜 C := by
-    simpa [intrinsicClosure_eq_closure 𝕜 C] using hy
-  exact Convex.openSegment_intrinsicInterior_intrinsicClosure_subset_intrinsicInterior hC hx hy'
-
-end Closure
 
 private theorem aux {α β : Type*} [TopologicalSpace α] [TopologicalSpace β] (φ : α ≃ₜ β)
     (s : Set β) : (interior s).Nonempty ↔ (interior (φ ⁻¹' s)).Nonempty := by
